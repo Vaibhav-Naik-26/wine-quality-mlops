@@ -104,7 +104,8 @@ def main():
 
     # Candidate model
     model = RandomForestClassifier(
-        n_estimators=200,
+        n_estimators=1,
+        max_depth=1,
         random_state=RANDOM_STATE,
         n_jobs=-1,
     )
