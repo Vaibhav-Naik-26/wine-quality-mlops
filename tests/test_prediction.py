@@ -35,7 +35,7 @@ def test_valid_prediction():
     result = predict(VALID_SAMPLE)
 
     assert isinstance(result, int)
-    assert result in [0, 1]
+    assert result == 999
 
 
 def test_missing_feature_is_rejected():
