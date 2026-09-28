@@ -17,6 +17,32 @@ The pipeline automatically:
 
 The pipeline runs automatically whenever changes are pushed to the `main` branch.
 
+### Setup Instructions
+
+Clone the repository and install the required Python dependencies:
+
+```bash
+git clone https://github.com/Vaibhav-Naik-26/wine-quality-mlops.git
+cd wine-quality-mlops
+pip install -r requirements.txt
+```
+
+To train and evaluate the model locally:
+
+```bash
+python src/train.py
+```
+
+If the quality gate passes, the trained model and metrics are created in the `artifacts/` directory.
+
+To run the application tests:
+
+```bash
+python -m pytest -q
+```
+
+The GitHub Actions workflow performs these steps automatically in a clean Ubuntu environment, so the pipeline does not depend on the local development environment.
+
 ---
 
 ## 2. Dataset
@@ -93,6 +119,8 @@ This makes the experiment reproducible.
 
 The validation data is kept separate from model training.
 
+Preprocessing is not required for this dataset because the selected Random Forest model can work directly with the numeric input features.
+
 ---
 
 ## 5. Baseline Model
@@ -167,12 +195,15 @@ The margin is kept unchanged during the failure and recovery demonstrations.
 
 The training script validates that:
 
+- The required `quality` column exists in the downloaded dataset.
 - Required feature columns exist.
-- The target column exists.
+- The generated target column exists.
 - Required values do not contain missing data.
 - The dataset contains enough rows.
 
 If validation fails, the script raises an exception and the workflow receives a non-zero exit code.
+
+The quality gate also causes the training step to return a non-zero exit code when the candidate model does not meet the required improvement.
 
 ---
 
@@ -229,6 +260,8 @@ Upload artifact
 Training, evaluation, application testing, and artifact creation are performed in the same GitHub Actions job.
 
 The artifact upload step is reached only when the previous steps have completed successfully.
+
+The workflow uses Python scripts rather than notebooks and does not depend on Colab, Google Drive, or the local development environment.
 
 ---
 
@@ -331,7 +364,7 @@ Contains the trained Random Forest model and the list of expected input features
 
 ### `metrics.json`
 
-Contains the baseline score, candidate score, required score, margin, and quality gate result.
+Contains the baseline score, candidate score, required score, margin, and gate result.
 
 ### `predict.py`
 
@@ -347,15 +380,17 @@ The final successful pipeline produced:
 
 The artifact was downloaded and verified after the successful run.
 
+The artifact is identified using the GitHub Actions workflow run number.
+
 ---
 
 ## 13. CI and Artifact Delivery
 
-The pipeline uses GitHub Actions for continuous integration.
+The pipeline demonstrates continuous integration because changes pushed to the `main` branch automatically trigger the GitHub Actions workflow.
 
-The training, quality evaluation, application testing, and package creation are performed in the same job.
+The workflow checks out the repository, creates a clean Python environment, installs dependencies, trains and evaluates the model, and runs the application tests automatically.
 
-The model package is uploaded using the GitHub Actions artifact system.
+Artifact delivery is demonstrated by creating a model package and uploading it with `actions/upload-artifact@v4`.
 
 The artifact upload step does not run when an earlier training or testing step fails.
 
@@ -383,9 +418,9 @@ This demonstrates that the pipeline does not publish an artifact when either the
 
 ## 15. MLOps Maturity
 
-This project represents an early-stage automated MLOps workflow.
+This project represents an early-stage automated MLOps workflow, corresponding to a basic Level 1-style pipeline automation stage.
 
-It includes:
+The implementation includes:
 
 - Automated data validation
 - Reproducible training
@@ -393,20 +428,17 @@ It includes:
 - Candidate model evaluation
 - Automated quality gating
 - Automated application testing
-- CI using GitHub Actions
+- Continuous integration using GitHub Actions
 - Conditional model packaging
 - Artifact delivery
 
-The workflow provides a basic automated control system around model training and validation.
+The workflow automates the training and validation process, but it does not include production deployment, continuous production monitoring, automated model retraining, or data/model drift monitoring.
 
-### Possible future improvements
-
-Possible improvements for a more mature MLOps system include:
+Possible improvements for the next maturity stage include:
 
 - Experiment tracking
 - Model versioning
 - Data versioning
-- Model monitoring
 - Automated deployment
 - Scheduled retraining
 - Production performance monitoring
@@ -443,7 +475,39 @@ The `artifacts/` directory is generated during training and is excluded from Git
 
 ---
 
-## 17. Conclusion
+## 17. Brief Answers to Required Questions
+
+### 1. Why does your evaluation metric suit your task?
+
+F1-score is suitable because this is a binary classification problem and F1 combines precision and recall into a single metric. It provides a useful measure of classification performance when the class distribution is not perfectly balanced.
+
+### 2. Why did you choose this improvement margin? What would happen if it were too low or too high?
+
+A margin of `0.05 F1-score` was chosen to require a meaningful improvement over the baseline. If the margin were too low, a very small improvement could allow a candidate model to pass. If it were too high, a useful model could be rejected even when it provides a meaningful improvement.
+
+### 3. What caused each failed run? Which check prevented publication?
+
+**Failure A:** The Random Forest configuration was deliberately weakened, producing an F1-score of `0.6827`, below the required `0.7465`. The model quality gate prevented publication.
+
+**Failure B:** An application test was deliberately changed to expect an incorrect prediction. The model quality gate passed, but the application test failed. The failed test prevented publication.
+
+The model configuration and application test were then restored, resulting in a successful final run.
+
+### 4. Which parts of your workflow demonstrate continuous integration and artifact delivery?
+
+Continuous integration is demonstrated by the GitHub Actions workflow automatically running whenever changes are pushed to `main`. It creates a clean Python environment, installs dependencies, trains and evaluates the model, and runs automated tests.
+
+Artifact delivery is demonstrated by creating the model package and uploading it using `actions/upload-artifact@v4`. The package is uploaded only after all preceding checks pass.
+
+### 5. Which MLOps maturity level best describes your implementation? Justify your answer using its actual capabilities, and identify what remains to reach the next level.
+
+This project represents an early-stage automated MLOps workflow, corresponding to a basic Level 1-style pipeline automation stage. It has automated training, evaluation, quality gating, application testing, CI, and artifact delivery.
+
+It does not yet include production deployment, production monitoring, automated retraining, or data/model drift monitoring. These capabilities would be needed for a more mature MLOps implementation.
+
+---
+
+## 18. Conclusion
 
 This project demonstrates how a machine learning workflow can be automated using GitHub Actions.
 
